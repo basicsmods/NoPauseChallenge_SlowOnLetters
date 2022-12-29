@@ -6,8 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
+using System.Security.Cryptography;
 using UnityEngine;
 using Verse;
+using Verse.AI.Group;
 
 namespace NoPauseChallenge
 {
@@ -87,7 +89,224 @@ namespace NoPauseChallenge
 		}
 	}
 
-	[HarmonyPatch(typeof(StorytellerUI), nameof(StorytellerUI.DrawStorytellerSelectionInterface))]
+    /*[HarmonyPatch(typeof(LetterMaker), nameof(LetterMaker.MakeLetter),
+    new Type[] { typeof(LetterDef) })]
+    class LetterMaker_MakeLetter
+    {
+        public static bool Prefix(ref Letter __result, LetterDef def)
+        {
+			if (Settings.slowOnAllLetters)
+			{
+				//Log.Message("MakeLetter1:");
+				//if (def != null && def.label != null)
+				//Log.Message(def.label);
+				var tm = Find.TickManager;
+				tm.CurTimeSpeed = TimeSpeed.Normal;
+			}
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(LetterMaker), nameof(LetterMaker.MakeLetter),
+    new Type[] { typeof(TaggedString), typeof(TaggedString), typeof(LetterDef), typeof(Faction), typeof(Quest) })]
+    class LetterMaker_MakeLetter2
+    {
+        public static bool Prefix(ref ChoiceLetter __result, TaggedString label, TaggedString text, LetterDef def, Faction relatedFaction = null, Quest quest = null)
+        {
+			if (Settings.slowOnAllLetters)
+			{
+				//Log.Message("MakeLetter2");
+				//if (label != null)
+				//Log.Message(label);
+				var tm = Find.TickManager;
+				tm.CurTimeSpeed = TimeSpeed.Normal;
+			}
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(LetterMaker), nameof(LetterMaker.MakeLetter),
+    new Type[] { typeof(TaggedString), typeof(TaggedString), typeof(LetterDef), typeof(LookTargets), typeof(Faction), typeof(Quest), typeof(List<ThingDef>) })]
+    class LetterMaker_MakeLetter3
+    {
+        public static bool Prefix(ref ChoiceLetter __result, TaggedString label, TaggedString text, LetterDef def, LookTargets lookTargets, Faction relatedFaction = null, Quest quest = null, List<ThingDef> hyperlinkThingDefs = null)
+        {
+			if (Settings.slowOnAllLetters)
+			{
+				//Log.Message("MakeLetter3");
+				//if (label != null)
+				//Log.Message(label);
+				var tm = Find.TickManager;
+				tm.CurTimeSpeed = TimeSpeed.Normal;
+			}
+            return true;
+        }
+    }*/
+
+    [HarmonyPatch(typeof(LetterStack), nameof(LetterStack.ReceiveLetter),
+        new Type[] { typeof(Letter), typeof(string) })]
+    class LetterStack_ReceiveLetter
+    {
+        public static bool Prefix(Letter let)
+        {
+			// This is what the original mod had, but doesn't seem to work properly.
+            //if (Settings.slowOnLetter) Main.eventSpeedActive = true;
+			// My solution:
+			if (Settings.slowOnAllLetters && let != null)
+			{
+				//Log.Message("ReceiveLetter:");
+				// The below could be used to find the exact colours of the letters
+				// so that we could have settings for slowing on specific letter
+				// colours but not others.
+				/* if (let != null && let.label != null)
+				{
+					Log.Message(let.label);
+					Log.Message(let.def.color.ToString());
+				} */
+				if (Settings.ignoreScannedUnderground && let.Label.rawText.StartsWith("Scanned underground"))
+				{
+					return true;
+				}
+                if (Settings.ignoreInspirations && (let.Label.rawText.StartsWith("Inspired") || let.Label.rawText.Contains("frenzy:")))
+                {
+                    return true;
+                }
+                if (Settings.ignoreMisc && (let.Label.rawText.StartsWith("Psychic soothe:") || let.Label.rawText.StartsWith("Eclipse") || let.Label.rawText.StartsWith("Aurora") || let.Label.rawText.StartsWith("Masterwork") || let.Label.rawText.StartsWith("Gauranlen pod sprout")))
+                {
+                    return true;
+                }
+                if (let.Label.rawText.StartsWith("No forced work"))
+                {
+                    return true;
+                }
+                var tm = Find.TickManager;
+				tm.CurTimeSpeed = TimeSpeed.Normal;
+			}
+            return true;
+        }
+    }
+
+    public class TransitionAction_SlowGame : TransitionAction
+    {
+        public override void DoAction(Transition trans)
+        {
+            if (Settings.slowOnPreparedAttack)
+            {
+                //Log.Message("Prepare for a while attacking now.");
+                var tm = Find.TickManager;
+                tm.CurTimeSpeed = TimeSpeed.Normal;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(LordJob_BossgroupAssaultColony), nameof(LordJob_BossgroupAssaultColony.CreateGraph),
+	new Type[] { })]
+	class LordJob_BossgroupAssaultColony_CreateGraph
+	{
+        public static void Postfix(ref StateGraph __result)
+        {
+            foreach (Transition transition in __result.transitions)
+            {
+                bool found = false;
+                foreach (TransitionAction postAction in transition.postActions)
+                {
+                    if (postAction.GetType() == typeof(TransitionAction_WakeAll))
+                    {
+                        found = true;
+                    }
+                }
+                if (found)
+                {
+                    transition.AddPostAction(new TransitionAction_SlowGame());
+                }
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(LordJob_StageThenAttack), nameof(LordJob_StageThenAttack.CreateGraph),
+	new Type[] { })]
+    class LordJob_StageThenAttack_CreateGraph
+    {
+        public static void Postfix(ref StateGraph __result)
+        {
+            foreach (Transition transition in __result.transitions)
+            {
+                bool found = false;
+                foreach (TransitionAction postAction in transition.postActions)
+                {
+                    if (postAction.GetType() == typeof(TransitionAction_WakeAll))
+                    {
+                        found = true;
+                    }
+                }
+                if (found)
+                {
+                    transition.AddPostAction(new TransitionAction_SlowGame());
+                }
+            }
+        }
+    }
+
+    /*
+    [HarmonyPatch(typeof(LordJob_BossgroupAssaultColony), nameof(LordJob_BossgroupAssaultColony.CreateGraph),
+    new Type[] { })]
+    class LordJob_BossgroupAssaultColony_CreateGraph
+    {
+        static IEnumerable<CodeInstruction> XTranspiler(IEnumerable<CodeInstruction> instructions)
+        {
+            Log.Message("Start Transpiling");
+            int Index = -1;
+            for (int i = 0; i < codes.Count; i++)
+            {
+                if (codes[i].opcode == OpCodes.Newobj)
+                {
+                    var strOperand = codes[i].operand.ToString();
+                    Log.Message(codes[i].ToString());
+                    Log.Message(strOperand);
+                    if (codes[i].operand.Equals(AccessTools.Constructor(typeof(TransitionAction_WakeAll))))
+                    {
+                        Log.Message("found");
+                        Index = i + 2;
+                        break;
+                    }
+                }
+            }
+            if (Index != -1)
+            {
+                codes.Insert(Index, new CodeInstruction(OpCodes.Ldloc_3));
+                codes.Insert(Index+1, new CodeInstruction(OpCodes.Newobj, AccessTools.Constructor(typeof(TransitionAction_SlowGame))));
+                codes.Insert(Index+2, new CodeInstruction(OpCodes.Callvirt, AccessTools.Method(typeof(Transition), nameof(Transition.AddPostAction))));
+                //codes.Insert(Index + 3, new CodeInstruction(OpCodes.Dup));
+            }
+            Log.Message("End Transpiling");
+            return codes.AsEnumerable();
+        }
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+        {
+            var l = XTranspiler(instructions).ToList(); // name your actual transpiler XTranspiler
+            string s = "Code:";
+            int i = 0;
+            foreach (var c in l)
+            {
+                if (c.opcode == OpCodes.Call ||
+                    c.opcode == OpCodes.Callvirt)
+                { // you can make certain operations more visible
+                    Log.Warning("" + i + ": " + c);
+                }
+                else
+                {
+                    Log.Message("" + i + ": " + c);
+                }
+                s += "\n" + i + ": " + c;
+                i++;
+                yield return c;
+            }
+            Log.Error(s); // or just print the entire thing out to copy to a text editor.
+        }
+    }
+    */
+
+    [HarmonyPatch(typeof(StorytellerUI), nameof(StorytellerUI.DrawStorytellerSelectionInterface))]
 	class StorytellerUI_DrawStorytellerSelectionInterface_Patch
 	{
 		public static void AddCheckbox(Listing_Standard infoListing, float gap)
@@ -278,19 +497,6 @@ namespace NoPauseChallenge
 		public static bool Prefix()
 		{
 			if (Settings.slowOnDamage)
-				Main.eventSpeedActive = true;
-
-			return true;
-		}
-	}
-
-	[HarmonyPatch(typeof(LetterStack), nameof(LetterStack.ReceiveLetter),
-		new Type[] { typeof(Letter), typeof(string) })]
-	class LetterStack_ReceiveLetter
-	{
-		public static bool Prefix()
-		{
-			if (Settings.slowOnLetter)
 				Main.eventSpeedActive = true;
 
 			return true;
@@ -632,7 +838,7 @@ namespace NoPauseChallenge
 				if (KeyBindingDefOf.TogglePause.KeyDownEvent)
 				{
 					var tm = Find.TickManager;
-					if (tm.CurTimeSpeed == TimeSpeed.Paused || Main.lastTimeSpeed == TimeSpeed.Paused)
+					if (Settings.spaceAlwaysSlows || tm.CurTimeSpeed == TimeSpeed.Paused || Main.lastTimeSpeed == TimeSpeed.Paused)
 					{
 						tm.CurTimeSpeed = TimeSpeed.Normal;
 						Main.lastTimeSpeed = TimeSpeed.Normal;

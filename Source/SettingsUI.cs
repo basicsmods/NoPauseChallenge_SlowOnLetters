@@ -18,7 +18,7 @@ namespace NoPauseChallenge
 
 		public override string SettingsCategory()
 		{
-			return "No Pause Challenge";
+			return "No Pause Challenge (Slow on Letters)";
 		}
 	}
 }

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
-	<name>No Pause Challenge</name>
+	<name>No Pause Challenge (With Slow On Letters)</name>
 	<author>Andreas Pardeike</author>
 	<supportedVersions>
 		<li>1.0</li>
@@ -17,8 +17,10 @@
 			<downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
 		</li>
 	</modDependencies>
-	<packageId>brrainz.nopausechallenge</packageId>
-	<description>The No Pause Challenge mod removes the ability to pause the game and prevents slowdowns. As a result you are forced to play in realtime and you will never have the ability to stop the game at any time. Can you handle it?
+	<packageId>brrainz.nopausechallenge.slowonletters</packageId>
+	<description>This is an edited version of the No Pause Challenge mod by Andreas Pardeike. I take no credit for the mod and will absolutely take this down if Andreas asks me to. I wanted the mod to automatically slow the game down to 1x speed on all letters so I made this edit and am sharing it on the workshop in case anybody else wants to use it. There is currently no way to disable this functionality so if you want to disable it, you'll have to just disable this mod and re-enable the original version. I've only made the change for 1.4 so this won't be compatible with older versions. (Original mod's description below).
+	
+The No Pause Challenge mod removes the ability to pause the game and prevents slowdowns. As a result you are forced to play in realtime and you will never have the ability to stop the game at any time. Can you handle it?
 
 All dialogs that usually pause the game will not do so. Saving and trading is done in real time and you get 1x, 2x, 3x and even 4x as speed buttons and the pause button is gone.
 
